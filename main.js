@@ -261,6 +261,103 @@ document.getElementById("search-btn").addEventListener("click", async () => {
     alert("Có lỗi xảy ra khi tìm địa chỉ.");
   }
 });
+// Bổ sung định vị thời gian thực để vẽ tuyến đường đến địa điểm đã tìm kiếm
+document.getElementById("navigate-btn").addEventListener("click", async () => {
+  const address = document.getElementById("addressInput").value;
+
+  if (!address) {
+    alert("Vui lòng nhập địa chỉ cần tìm trước khi dẫn đường.");
+    return;
+  }
+
+  // Lấy kết quả tìm kiếm (nếu có)
+  try {
+    const response = await axios.get(
+      "https://nominatim.openstreetmap.org/search",
+      {
+        params: {
+          q: address,
+          format: "json",
+          addressdetails: 1,
+          limit: 1,
+        },
+      }
+    );
+
+    if (response.data.length === 0) {
+      alert("Không tìm thấy địa chỉ để dẫn đường.");
+      return;
+    }
+
+    const result = response.data[0];
+    const endLonLat = [parseFloat(result.lon), parseFloat(result.lat)];
+
+    // Định vị người dùng thời gian thực
+    navigator.geolocation.watchPosition(
+      async (position) => {
+        const userLonLat = [
+          position.coords.longitude,
+          position.coords.latitude,
+        ];
+        drawUserLocation(userLonLat);
+
+        try {
+          const routeResponse = await axios.post(
+            "https://api.openrouteservice.org/v2/directions/driving-car/geojson",
+            {
+              coordinates: [userLonLat, endLonLat],
+            },
+            {
+              headers: {
+                Authorization:
+                  "5b3ce3597851110001cf6248f44cf6bca42c4519a57751f700200c20",
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          const features = new GeoJSON().readFeatures(routeResponse.data, {
+            dataProjection: "EPSG:4326",
+            featureProjection: "EPSG:3857",
+          });
+
+          const routeSource = new VectorSource({
+            features: features,
+          });
+
+          if (routeLayer) map.removeLayer(routeLayer);
+          routeLayer = new VectorLayer({
+            source: routeSource,
+            style: new Style({
+              stroke: new Stroke({
+                color: "#FF0000",
+                width: 4,
+              }),
+            }),
+          });
+
+          map.addLayer(routeLayer);
+          map
+            .getView()
+            .fit(routeSource.getExtent(), { padding: [40, 40, 40, 40] });
+        } catch (err) {
+          console.error("Lỗi khi lấy tuyến đường:", err);
+          alert("Không thể lấy tuyến đường. Vui lòng thử lại.");
+        }
+      },
+      (error) => {
+        console.error("Lỗi khi định vị người dùng:", error);
+        alert("Không thể định vị thiết bị để dẫn đường.");
+      },
+      {
+        enableHighAccuracy: true,
+      }
+    );
+  } catch (err) {
+    console.error("Lỗi khi tìm địa chỉ để dẫn đường:", err);
+    alert("Có lỗi xảy ra khi tìm địa chỉ để dẫn đường.");
+  }
+});
 // document.getElementById("search-btn").addEventListener("click", () => {
 //   const keyword = document
 //     .getElementById("addressInput")
